@@ -1,0 +1,67 @@
+{
+  "data": [
+    {
+      "organization_name": "ember-cli",
+      "repository_name": "ember-cli",
+      "open_pulls_count": 42,
+      "closed_pulls_count": 4914,
+      "closed_merged_count": 3920,
+      "closed_unmerged_count": 994,
+      "average_time_to_resolution": 18.541060339694567
+    },
+    {
+      "organization_name": "ember-engines",
+      "repository_name": "ember-engines",
+      "open_pulls_count": 20,
+      "closed_pulls_count": 392,
+      "closed_merged_count": 323,
+      "closed_unmerged_count": 69,
+      "average_time_to_resolution": 19.757591145833345
+    },
+    {
+      "organization_name": "emberjs",
+      "repository_name": "data",
+      "open_pulls_count": 48,
+      "closed_pulls_count": 4280,
+      "closed_merged_count": 3150,
+      "closed_unmerged_count": 1130,
+      "average_time_to_resolution": 29.51851344810057
+    },
+    {
+      "organization_name": "emberjs",
+      "repository_name": "ember-test-helpers",
+      "open_pulls_count": 12,
+      "closed_pulls_count": 462,
+      "closed_merged_count": 377,
+      "closed_unmerged_count": 85,
+      "average_time_to_resolution": 25.67280859187107
+    },
+    {
+      "organization_name": "emberjs",
+      "repository_name": "ember.js",
+      "open_pulls_count": 80,
+      "closed_pulls_count": 8922,
+      "closed_merged_count": 6925,
+      "closed_unmerged_count": 1997,
+      "average_time_to_resolution": 23.349543688043212
+    },
+    {
+      "organization_name": "glimmerjs",
+      "repository_name": "glimmer-vm",
+      "open_pulls_count": 28,
+      "closed_pulls_count": 1104,
+      "closed_merged_count": 882,
+      "closed_unmerged_count": 222,
+      "average_time_to_resolution": 22.323952797906603
+    },
+    {
+      "organization_name": "glimmerjs",
+      "repository_name": "glimmer.js",
+      "open_pulls_count": 9,
+      "closed_pulls_count": 215,
+      "closed_merged_count": 184,
+      "closed_unmerged_count": 31,
+      "average_time_to_resolution": 20.577067721791543
+    }
+  ]
+}

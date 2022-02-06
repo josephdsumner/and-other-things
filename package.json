@@ -66,5 +66,9 @@
   },
   "ember": {
     "edition": "octane"
+  },
+  "dependencies": {
+    "glob": "^7.2.0",
+    "octokit": "^1.7.1"
   }
 }
