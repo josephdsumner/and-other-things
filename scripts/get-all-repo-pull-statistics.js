@@ -14,14 +14,14 @@ const ORGANIZATIONS_AND_REPOSITORIES_ARRAY = [
 // NB: GitHub Issues API: returns `issues` includes `/issues` and `/pulls`
 // Filters `issues` for pull requests via existence of `pull_request` key
 // Writes all pull data as {data: [{}]} `../data/org--repo.json`
-async function getAllPullRequests(organizationName, repositoryName) {
+async function getAllPullRequests(orgName, repoName) {
   const octokit = new Octokit({
     auth: 'TOKEN_GOES_HERE',
   });
 
   const pullRequests = await octokit.paginate(octokit.rest.pulls.list, {
-    owner: organizationName,
-    repo: repositoryName,
+    owner: orgName,
+    repo: repoName,
     per_page: 100,
     state: 'all',
   });
@@ -31,7 +31,7 @@ async function getAllPullRequests(organizationName, repositoryName) {
   );
 
   fs.writeFileSync(
-    `../data/${organizationName}--${repositoryName}.json`,
+    `../data/${orgName}--${repoName}.json`,
     JSON.stringify(Object.assign({}, { data: pullRequestsBotsFiltered }))
   );
 
@@ -39,13 +39,13 @@ async function getAllPullRequests(organizationName, repositoryName) {
 }
 
 // WIP POC for GitHub API calls
-async function getFirstPageOfPullRequests(organizationName, repositoryName) {
+async function getFirstPageOfPullRequests(orgName, repoName) {
   const octokit = new Octokit({
     auth: 'TOKEN_GOES_HERE',
   });
 
   const result = await octokit.request(
-    `GET /repos/${organizationName}/${repositoryName}/pulls`,
+    `GET /repos/${orgName}/${repoName}/pulls`,
     {
       state: 'all',
       per_page: '100',
@@ -55,7 +55,7 @@ async function getFirstPageOfPullRequests(organizationName, repositoryName) {
   const data = await result.data;
 
   fs.writeFileSync(
-    `../data/${organizationName}--${repositoryName}.json`,
+    `../data/${orgName}--${repoName}.json`,
     JSON.stringify(Object.assign({}, { data: data }))
   );
 
@@ -63,23 +63,21 @@ async function getFirstPageOfPullRequests(organizationName, repositoryName) {
 }
 
 // Bucket sorts pull requests for statistic analysis
-function getSortedPulls(pullsAllArray) {
-  const pullsOpenArray = pullsAllArray.filter((pull) => pull.state === 'open');
-  const pullsClosedArray = pullsAllArray.filter(
-    (pull) => pull.state === 'closed'
-  );
-  const pullsClosedMergedArray = pullsClosedArray.filter(
+function getSortedPulls(pullsAll) {
+  const pullsOpen = pullsAll.filter((pull) => pull.state === 'open');
+  const pullsClosed = pullsAll.filter((pull) => pull.state === 'closed');
+  const pullsClosedMerged = pullsClosed.filter(
     (pull) => pull.closed_at === pull.merged_at
   );
-  const pullsClosedUnmergedArray = pullsClosedArray.filter(
+  const pullsClosedUnmerged = pullsClosed.filter(
     (pull) => pull.closed_at !== pull.merged_at
   );
 
   const result = [
-    pullsOpenArray,
-    pullsClosedArray,
-    pullsClosedMergedArray,
-    pullsClosedUnmergedArray,
+    pullsOpen,
+    pullsClosed,
+    pullsClosedMerged,
+    pullsClosedUnmerged,
   ];
   return result;
 }
@@ -105,46 +103,36 @@ function getTimeBetweenCreatedAndClosed(pullClosed) {
 // - Calculate how long each one was 'open' for, in days
 // - Calculate the average 'open' time duration
 // TODO: add metric for spread
-function getAveragePullOpenTime(pullsClosedArray) {
-  let durations = pullsClosedArray.map((pull) =>
+function getAveragePullOpenTime(pullsClosed) {
+  let durations = pullsClosed.map((pull) =>
     getTimeBetweenCreatedAndClosed(pull)
   );
   let averageDuration =
-    durations.reduce((prev, current) => prev + current) /
-    pullsClosedArray.length;
+    durations.reduce((prev, current) => prev + current) / pullsClosed.length;
   return averageDuration;
 }
 
 // Get all pull requests ever for org/repo, write data to org--repo.json
 // Perform statistical analysis on data, write to org--repo--statistics.json
-async function getAndWriteRepoPullStatistics(organizationName, repositoryName) {
-  const pullsAllArray = await getAllPullRequests(
-    organizationName,
-    repositoryName
-  );
-  const [
-    pullsOpenArray,
-    pullsClosedArray,
-    pullsClosedMergedArray,
-    pullsClosedUnmergedArray,
-  ] = getSortedPulls(await pullsAllArray);
+async function getAndWriteRepoPullStatistics(orgName, repoName) {
+  const pullsAll = await getAllPullRequests(orgName, repoName);
+  const [pullsOpen, pullsClosed, pullsClosedMerged, pullsClosedUnmerged] =
+    getSortedPulls(await pullsAll);
 
   const pullStatistics = Object.assign(
     {},
     {
-      organization_name: organizationName,
-      repository_name: repositoryName,
-      open_pulls_count: await pullsOpenArray.length,
-      closed_pulls_count: await pullsClosedArray.length,
-      closed_merged_count: await pullsClosedMergedArray.length,
-      closed_unmerged_count: await pullsClosedUnmergedArray.length,
-      average_time_to_resolution: await getAveragePullOpenTime(
-        pullsClosedArray
-      ),
+      organization_name: orgName,
+      repository_name: repoName,
+      open_pulls_count: await pullsOpen.length,
+      closed_pulls_count: await pullsClosed.length,
+      closed_merged_count: await pullsClosedMerged.length,
+      closed_unmerged_count: await pullsClosedUnmerged.length,
+      average_time_to_resolution: await getAveragePullOpenTime(pullsClosed),
     }
   );
   fs.writeFileSync(
-    `../data/${organizationName}--${repositoryName}--statistics.json`,
+    `../data/${orgName}--${repoName}--statistics.json`,
     JSON.stringify(Object.assign({}, { data: pullStatistics }))
   );
   return await pullStatistics;
@@ -169,52 +157,25 @@ const getAndWriteAllRepoPullStatistics = async () => {
   );
 };
 
-function getUniqueArrayElements(value, index, self) {
-  return self.indexOf(value) === index;
-}
-
-function getCountOfArrayElements(rawArray) {
-  let uniqueElementsArray = rawArray.filter(getUniqueArrayElements);
-  let elementCountArray = new Array(uniqueElementsArray.length);
-  for (let ii = 0; ii < elementCountArray.length; ii++) {
-    let currentElement = uniqueElementsArray[ii];
-    let currentCount = 0;
-    for (let jj = 0; jj < rawArray.length; jj++) {
-      if (rawArray[jj] === currentElement) {
-        currentCount++;
-      }
-    }
-    elementCountArray[ii] = Object.assign(
-      {},
-      { element: currentElement, count: currentCount }
-    );
-  }
-  return elementCountArray;
-}
-
-function readRepoPullRequestsFromFile(organizationName, repositoryName) {
-  return JSON.parse(
-    fs.readFileSync(`../data/${organizationName}--${repositoryName}.json`)
-  );
+function readRepoPullRequestsFromFile(orgName, repoName) {
+  return JSON.parse(fs.readFileSync(`../data/${orgName}--${repoName}.json`));
 }
 
 function generateStatisticsSummaryFromFiles() {
-  let pullStatisticsFilesArray = glob.sync(
+  let pullStatisticsFiles = glob.sync(
     '../data/pulls/statistics/*--statistics.json'
   );
-  let resultsArray = pullStatisticsFilesArray.map(
+  let results = pullStatisticsFiles.map(
     (filePath) => JSON.parse(fs.readFileSync(filePath)).data
   );
   fs.writeFileSync(
     '../data/pulls/results.json',
-    JSON.stringify(Object.assign({}, { data: resultsArray }))
+    JSON.stringify(Object.assign({}, { data: results }))
   );
 }
 
 module.exports = {
   ORGANIZATIONS_AND_REPOSITORIES_ARRAY,
-  getCountOfArrayElements,
-  getUniqueArrayElements,
   getAllPullRequests,
   getAllRepoPullStatistics,
   getAndWriteAllRepoPullStatistics,
