@@ -5,10 +5,10 @@ const { getArrayMean, getElapsedTimeDays } = require('./utils-general');
 const { getDataFilePath } = require('./utils-data-file-paths');
 const ORGS_REPOS_LIST = require('../constants/data-file-paths');
 
-/* 
+/*
   1. Utility functions for fetching pull request raw data from GitHub
     - Parse list of organizations + repositories to fetch via `../constants`
-    - Connect to GitHub API via Octokit (token required!)
+    - Connect to GitHub API via Octokit (NB: token required)
     - Fetch raw pull data for every repository in the list
   2. Utility functions for working with pull request raw data:
     - read pull request raw data from file
@@ -17,10 +17,10 @@ const ORGS_REPOS_LIST = require('../constants/data-file-paths');
       - sort pull requests by state: open, closed
       - sub-sort `closed` pull requests by close mechanism: `merged`, `unmerged`
     - calculate statistics on processed data + format for export:
-      - Repository Information:  
+      - Repository Information:
         - Organization Name
         - Repository Name
-      - Open pull requests: 
+      - Open pull requests:
         - Number
       - Closed pull requests:
         - Number
@@ -29,11 +29,53 @@ const ORGS_REPOS_LIST = require('../constants/data-file-paths');
         - Mean time to resolution
  */
 
+// 1. Utility functions for working with pull request raw data
+//------------------------------------------------------------------------------
+
+// Parse
+const getAllReposForOrg = (orgName) => {
+  let orgRecord = ORGS_REPOS_LIST.find(
+    (orgRecord) => orgRecord['orgName'] === orgName
+  );
+  return orgRecord['repoNames'];
+};
+
+// Connect to GitHub via Octokit
+const getNewOctokit = async (authToken) => new Octokit({ auth: authToken });
+
+// Fetch all Pull Request Data for a given organization / repository
+const fetchPullsRawData = (orgName, repoName) => {
+  const octokit = await getNewOctokit('TOKEN_GOES_HERE')
+  const pullsRawData = await octokit.paginate(octokit.rest.pulls.list, {
+    owner: orgName,
+    repo: repoName,
+    per_page: 100,
+    state: 'all',
+  });
+
+  return await pullsRawData;
+}
+
+const writePullsRawData = (pullsRawData) => {
+  fs.writeFileSync(
+    `${getDataFilePath(
+      orgName,
+      repoName,
+      'pulls',
+      'raw'
+    )}`,
+    JSON.stringify(Object.assign({}, { data: pullsRawData })))
+
+
+// 2. Utility functions for working with pull request raw data
+//------------------------------------------------------------------------------
+
 // Read
-const readPullsRawData = (orgName, repoName) =>
-  JSON.parse(
+function readPullsRawData(orgName, repoName) {
+  return JSON.parse(
     fs.readFileSync(`${getDataFilePath(orgName, repoName, 'pulls', 'raw')}`)
   );
+}
 
 // Process
 const getFilteredPulls = (pulls) =>
@@ -111,12 +153,26 @@ function readRepoPullStatisticsAndWriteSummary() {
   );
 }
 
-// Batch operations
-const getAllReposForOrg = (orgName) => {
-  let orgRecord = ORGS_REPOS_LIST.find(
-    (orgRecord) => orgRecord['orgName'] === orgName
-  );
-  return orgRecord['repoNames'];
-};
+// Batch Operations: do everything from scratch
+// 1. Generate list of [org, repo] combinations to fetch
+// 2. For each [org, repo]:
+//  - fetch all pull request raw data
+//  - write raw to file
+//  - process + calculate statistics
+//  - write statistics to file
+// 3. Read all statistics files, combine data, write to file
 
 
+// 1. Generate list of [org, repo] combinations to fetch
+
+
+// 2. For each [org, repo]:
+//  - fetch all pull request raw data
+//  - write raw to file
+//  - process + calculate statistics
+//  - write statistics to file
+// 3. Read all statistics files, combine data, write to file
+
+module.exports = {
+
+}
